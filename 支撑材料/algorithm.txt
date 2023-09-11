@@ -1,0 +1,214 @@
+计算余弦效率
+import numpy as np
+import pandas as pd
+
+# 读取数据
+dataset1 = pd.read_csv(r"C:\Users\path\Desktop\余弦效率.csv")
+dataset2 = pd.read_excel(r"F:\QQ_file\4000点cos.xlsx")
+z = 4
+H = 88
+avg = 0
+# 提取数据列
+sina_values = dataset1.iloc[11, 0:5].values
+cosr_values = dataset1.iloc[11, 6:11].values
+r_x_values = dataset2.iloc[0:1745, 0].values
+r_y_values = dataset2.iloc[0:1745, 1].values
+
+# 存储余弦效率的列表
+cosine_efficiencies = []
+
+# 遍历r_x_values和r_y_values
+for r_x, r_y in zip(r_x_values, r_y_values):
+    # 计算定日镜到吸热器中心点的反射光线单位向量
+    r = np.array([-r_x, -r_y, H - z]) / np.sqrt(r_x ** 2 + r_y ** 2 + (H - z) ** 2)
+
+    # 遍历sina_values和cosr_values
+    for sina, cosr in zip(sina_values, cosr_values):
+        sina = float(sina)
+        cosr = float(cosr)
+        s = np.array([-np.sqrt(1 - sina * sina) * np.sqrt(1 - cosr * cosr),
+                      -np.sqrt(1 - sina * sina) * cosr,
+                      -sina])
+
+        # 计算余弦效率
+        cosine_efficiency = abs(np.sqrt((1 - np.dot(s, r))/ 2 ))
+        cosine_efficiencies.append(cosine_efficiency)
+
+# 打印余弦效率列表
+for i, cosine_efficiency in enumerate(cosine_efficiencies, start=1):
+    # print(f"余弦效率 {i}: {cosine_efficiency}")
+    print(cosine_efficiency)
+    # avg += cosine_efficiency
+    # print(avg)
+
+# avg = avg/5/1745
+# print(avg)
+
+# 创建一个DataFrame来存储余弦效率数据
+data = {'余弦效率': cosine_efficiencies}
+df = pd.DataFrame(data)
+
+# 将DataFrame保存到Excel文件
+df.to_excel(r"C:\Users\path\Desktop\余弦效率结果12.xlsx", index=False)
+
+
+计算大气透射率
+import numpy as np
+import pandas as pd
+
+# 读取Excel文件
+dataset = pd.read_excel(r"C:\Users\path\Desktop\CUMCM2023Problems\CUMCM2023Problems\A题\附件.xlsx")
+
+# 提取数据列
+x_values = dataset.iloc[0:1746, 0].values
+y_values = dataset.iloc[0:1746, 1].values
+z_values = dataset.iloc[0:1746, 2].values
+
+
+# 目标点坐标
+target_point = np.array([0, 0, 84])
+
+# 计算距离
+distances = []
+
+for x, y, z in zip(x_values, y_values, z_values):
+    point = np.array([x, y, z])
+    distance = np.linalg.norm(point - target_point)
+    # distances.append(distance)
+    # print(distance)
+    at = 0.99321 - 0.0001176 * distance+1.97*10e-8*distance*distance
+    print(at)
+# # 将结果添加到数据集中
+# dataset['距离'] = distances
+#
+# # 打印或保存计算结果
+# print(dataset)
+
+# 如果需要保存结果到新的Excel文件
+# dataset.to_excel("结果文件路径.xlsx", index=False)
+
+计算截断效率
+import pandas as pd
+import numpy as np
+from scipy.integrate import nquad
+
+# 读取Excel文件，假设数据存储在Sheet1中
+excel_file = r"C:\Users\path\Desktop\deg.xlsx"
+df = pd.read_excel(excel_file, sheet_name="Sheet1")
+avg = 0
+# 定义积分的被积函数
+def integrand(x, y, sigma):
+    return np.exp(-(x**2 + y**2) / (2 * sigma**2))
+
+# 循环处理每一组数据
+for index, row in df.iterrows():
+    phi_1 = row['phi_1']  # 替换'phi_1'为Excel文件中的实际列名
+    theta_1 = row['theta_1']  # 替换'theta_1'为Excel文件中的实际列名
+    phi_2 = row['phi_14']  # 替换'phi_2'为Excel文件中的实际列名
+    theta_2 = row['theta_14']  # 替换'theta_2'为Excel文件中的实际列名
+    sigma = 0.26
+
+    # 定义积分范围（根据限制条件）
+    R = np.sqrt(4/np.pi)
+    x_min = -4
+    x_max = 4
+    y_min = -R * np.cos(phi_1) * np.cos(theta_2 - theta_1) * np.cos(np.pi/2 - phi_2 - theta_1)
+    y_max = R * np.cos(phi_1) * np.cos(theta_2 - theta_1) * np.cos(np.pi/2 - phi_2 - theta_1)
+
+    # 执行二重积分计算
+    result, _ = nquad(integrand, [[x_min, x_max], [y_min, y_max]], args=(sigma,))
+
+    # 计算 eta
+    eta = 1 / (2 * np.pi * sigma**2) * result
+
+    eta = np.abs(eta)
+    avg += eta
+    # 输出结果
+    print(f"Result for Row {index+1}: {eta}")
+avg = avg/1745/5
+print(avg)
+
+计算镜面角
+import numpy as np
+import pandas as pd
+import math
+
+dataset1 = pd.read_excel(r"F:\QQ_file\定日镜两角.xlsx")
+dataset2 = pd.read_excel(r"C:\Users\path\Desktop\CUMCM2023Problems\CUMCM2023Problems\A题\余弦效率.xlsx")
+phi1_values = dataset1.iloc[0:1746, 4].values
+theta1_values = dataset1.iloc[0:1746, 7].values
+
+# 输入值
+phi3 = dataset2.iloc[24:29, 12].values
+theta3 = dataset2.iloc[31:36, 12].values
+
+for phi1, theta1 in zip(phi1_values, theta1_values):
+    phi1 = float(phi1)
+    theta1 = float(theta1)
+
+    # 计算第一个公式
+    phi3 = phi3.astype(float)  # 将phi3和theta3转换为浮点数类型
+    theta3 = theta3.astype(float)
+    numerator = np.cos(phi1) * np.sin(theta1) + np.cos(phi3) * np.sin(theta3)
+    denominator = np.cos(phi1) * np.cos(theta1) + np.cos(phi3) * np.cos(theta3)
+    tan_theta2 = numerator / denominator
+
+    # print("phi1 =", phi1)
+    # print("theta1 =", theta1)
+    # print("tan(theta2) =", tan_theta2)
+ # 计算反三角函数并转换为角度
+    theta2_rad = np.arctan(tan_theta2)
+    theta2_deg = np.degrees(theta2_rad)
+    # print(theta2_deg)
+
+ # 高度角与上面得出的方位角互余
+    phi2_deg = 90 - theta2_deg
+    print(phi2_deg)
+
+计算 DNI
+import math
+import pandas as pd
+
+dataset1 = pd.read_csv(r"C:\Users\path\Desktop\余弦效率.csv")
+h = 3.004  # 站点海拔高度，单位km
+sina_values = dataset1.iloc[0:12, 0].values
+
+# 计算a、b、c
+a = 0.4237 - 0.00821 * (6 - h) ** 2
+b = 0.5055 + 0.00595 * (6.5 - h) ** 2
+c = 0.2711 + 0.01858 * (2.5 - h) ** 2
+
+# 遍历sina_values并计算DNI
+for sina in sina_values:
+    sina = float(sina)
+    DNI = 1.366 * (a + b * math.exp(-c / sina))
+    print(DNI)
+
+选择算法
+import pandas as pd
+# 读取Excel文件
+df = pd.read_excel(r"C:\Users\path\Desktop\测试1.xlsx")
+
+# 设置阈值
+threshold_value = 1811.5942  # 你可以替换为你需要的阈值
+
+# 从Excel文件中获取物品的价值
+values = df['eta'].tolist()  # 请替换'价值列名'为你的数据集中的价值列名称
+
+# 根据价值从高到低排序
+sorted_items = sorted(enumerate(values), key=lambda x: x[1], reverse=True)
+
+# 寻找选择的物品序号
+selected_items = []
+current_value = 0
+for item in sorted_items:
+    item_index, item_value = item
+    if current_value + item_value <= threshold_value:
+        selected_items.append(item_index)
+        current_value += item_value
+
+# 输出选择序号结果
+# my_test = set(selected_items)
+# print(my_test)
+print("选择的物品序号：", selected_items)
+# print("1")
